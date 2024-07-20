@@ -10,6 +10,8 @@ import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,12 +19,15 @@ import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class WorldPluginManager extends JavaPlugin implements Listener {
     private Map<String, Map<String, Boolean>> pluginWorldStatus = new HashMap<>();
     private final String PLUGIN_NAME = "WorldPluginManager";
+    private FileConfiguration messagesConfig;
 
     private static final List<String> WORLD_EDIT_COMMANDS = Arrays.asList(
         "help", "tool", "sel", "desel", "pos1", "pos2", "hpos1", "hpos2", "chunk",
@@ -42,6 +47,7 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        loadMessagesConfig();
         getCommand("displ").setExecutor(new DisplCommand(this));
         getCommand("enpl").setExecutor(new EnplCommand(this));
         getCommand("flags").setExecutor(new FlagsCommand(this));
@@ -52,13 +58,29 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
         getCommand("focus").setTabCompleter(new FocusCommand(this));
         loadConfig();
         getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info("Plugin activé !");
+        getLogger().info("Plugin enabled!");
     }
 
     @Override
     public void onDisable() {
         saveConfig();
-        getLogger().info("Plugin désactivé !");
+        getLogger().info("Plugin disabled!");
+    }
+
+    private void loadMessagesConfig() {
+        File messagesFile = new File(getDataFolder(), "messages.yml");
+        if (!messagesFile.exists()) {
+            saveResource("messages.yml", false);
+        }
+        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+    }
+
+    public String getMessage(String key, Map<String, String> placeholders) {
+        String message = messagesConfig.getString(key, key);
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            message = message.replace("{" + entry.getKey() + "}", entry.getValue());
+        }
+        return ChatColor.translateAlternateColorCodes('&', message);
     }
 
     @SuppressWarnings("unchecked")
@@ -95,7 +117,6 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
         String worldName = player.getWorld().getName();
         String message = event.getMessage();
 
-        // Gestion des commandes WorldEdit
         if (message.startsWith("//")) {
             handleWorldEditCommand(event, player, worldName, message.substring(2));
             return;
@@ -108,7 +129,10 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
             Plugin plugin = command.getPlugin();
             String pluginId = plugin.getDescription().getName();
             if (!isPluginEnabledInWorld(pluginId, worldName)) {
-                player.sendMessage(ChatColor.RED + "Le plugin " + plugin.getName() + " est désactivé dans ce monde.");
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("plugin", plugin.getName());
+                placeholders.put("world", worldName);
+                player.sendMessage(getMessage("plugin_disabled", placeholders));
                 event.setCancelled(true);
             }
         }
@@ -122,7 +146,10 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
             if (plugin != null) {
                 String pluginId = plugin.getDescription().getName();
                 if (!isPluginEnabledInWorld(pluginId, worldName)) {
-                    player.sendMessage(ChatColor.RED + "Le plugin " + plugin.getName() + " est désactivé dans ce monde.");
+                    Map<String, String> placeholders = new HashMap<>();
+                    placeholders.put("plugin", plugin.getName());
+                    placeholders.put("world", worldName);
+                    player.sendMessage(getMessage("plugin_disabled", placeholders));
                     event.setCancelled(true);
                 }
             }
@@ -137,47 +164,67 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
     public void setPluginStatus(String pluginName, String worldName, boolean status, CommandSender sender) {
         String pluginId = getPluginId(pluginName);
         if (pluginId == null) {
-            sender.sendMessage(ChatColor.RED + "Plugin " + pluginName + " non trouvé.");
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("plugin", pluginName);
+            sender.sendMessage(getMessage("plugin_not_found", placeholders));
             return;
         }
 
         if (pluginName.equalsIgnoreCase(PLUGIN_NAME) && !status) {
-            sender.sendMessage(ChatColor.RED + "Vous ne pouvez pas désactiver le plugin " + PLUGIN_NAME + " dans aucun monde.");
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("plugin", PLUGIN_NAME);
+            sender.sendMessage(getMessage("cannot_disable_main_plugin", placeholders));
             return;
         }
 
         pluginWorldStatus.putIfAbsent(worldName, new HashMap<>());
         pluginWorldStatus.get(worldName).put(pluginId, status);
         saveConfigData();
-        sender.sendMessage(ChatColor.GREEN + "Plugin " + pluginName + " (" + pluginId + ") " + (status ? "activé" : "désactivé") + " dans le monde " + worldName);
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("plugin", pluginName);
+        placeholders.put("world", worldName);
+        sender.sendMessage(getMessage(status ? "plugin_enabled" : "plugin_disabled", placeholders));
     }
 
     public void displayPluginFlag(String worldName, String pluginName, CommandSender sender) {
         String pluginId = getPluginId(pluginName);
         if (pluginId == null) {
-            sender.sendMessage(ChatColor.RED + "Plugin " + pluginName + " non trouvé.");
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("plugin", pluginName);
+            sender.sendMessage(getMessage("plugin_not_found", placeholders));
             return;
         }
 
         boolean status = pluginWorldStatus.containsKey(worldName) && pluginWorldStatus.get(worldName).getOrDefault(pluginId, true);
-        sender.sendMessage(ChatColor.GOLD + "Plugin " + pluginName + " (" + pluginId + ") dans le monde " + worldName + ": " + (status ? "Activé" : "Désactivé"));
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("plugin", pluginName);
+        placeholders.put("world", worldName);
+        sender.sendMessage(getMessage(status ? "plugin_enabled" : "plugin_disabled", placeholders));
     }
 
     public void displayFlags(String worldName, CommandSender sender) {
         if (!pluginWorldStatus.containsKey(worldName)) {
-            sender.sendMessage(ChatColor.YELLOW + "Aucun plugin configuré pour le monde " + worldName);
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("world", worldName);
+            sender.sendMessage(getMessage("world_not_found", placeholders));
             return;
         }
 
-        sender.sendMessage(ChatColor.GOLD + "Plugins pour le monde " + worldName + ":");
-        pluginWorldStatus.get(worldName).forEach((plugin, status) ->
-                sender.sendMessage(ChatColor.AQUA + plugin + ": " + (status ? "Activé" : "Désactivé")));
+        sender.sendMessage(ChatColor.GOLD + "Plugins for world " + worldName + ":");
+        pluginWorldStatus.get(worldName).forEach((plugin, status) -> {
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("plugin", plugin);
+            placeholders.put("world", worldName);
+            sender.sendMessage(getMessage(status ? "plugin_enabled" : "plugin_disabled", placeholders));
+        });
     }
 
     public void setFocus(String pluginName, String worldName, CommandSender sender) {
         String pluginId = getPluginId(pluginName);
         if (pluginId == null) {
-            sender.sendMessage(ChatColor.RED + "Plugin " + pluginName + " non trouvé.");
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("plugin", pluginName);
+            sender.sendMessage(getMessage("plugin_not_found", placeholders));
             return;
         }
 

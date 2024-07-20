@@ -22,6 +22,11 @@ public class FlagsCommand implements TabExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!sender.hasPermission("worldpluginmanager.flags")) {
+            sender.sendMessage(plugin.getMessage("no_permission", null));
+            return true;
+        }
+
         if (args.length < 1 || args.length > 2) {
             sender.sendMessage("Usage: /flags <world> [<plugin>]");
             return false;
@@ -31,7 +36,7 @@ public class FlagsCommand implements TabExecutor, TabCompleter {
         World world = plugin.getServer().getWorld(worldName);
 
         if (world == null) {
-            sender.sendMessage("Le monde spécifié n'existe pas.");
+            sender.sendMessage("The specified world does not exist.");
             return false;
         }
 

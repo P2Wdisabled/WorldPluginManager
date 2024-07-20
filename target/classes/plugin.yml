@@ -1,18 +1,33 @@
 name: WorldPluginManager
-version: 1.0
 main: fr.P2W.wplmanager.WorldPluginManager
-api-version: 1.19
-author: P2Wdisabled
+version: 2.0
 commands:
   displ:
-    description: Désactiver un plugin dans un monde spécifique
-    usage: /displ <nom du plugin> <nom du monde>
+    description: Disables a plugin in a specified world.
+    usage: /displ <plugin> <world>
+    permission: worldpluginmanager.displ
   enpl:
-    description: Activer un plugin dans un monde spécifique
-    usage: /enpl <nom du plugin> <nom du monde>
+    description: Enables a plugin in a specified world.
+    usage: /enpl <plugin> <world>
+    permission: worldpluginmanager.enpl
   flags:
-    description: Afficher les états des plugins dans un monde spécifique
-    usage: /flags <nom du monde>
+    description: Displays the status of plugins in a specified world.
+    usage: /flags <world> [plugin]
+    permission: worldpluginmanager.flags
   focus:
-    description: Activer un plugin uniquement dans un monde spécifique
-    usage: /focus <nom du plugin> <nom du monde>
+    description: Sets a plugin to be enabled only in a specified world.
+    usage: /focus <plugin> <world>
+    permission: worldpluginmanager.focus
+permissions:
+  worldpluginmanager.displ:
+    description: Allows the use of the /displ command.
+    default: op
+  worldpluginmanager.enpl:
+    description: Allows the use of the /enpl command.
+    default: op
+  worldpluginmanager.flags:
+    description: Allows the use of the /flags command.
+    default: op
+  worldpluginmanager.focus:
+    description: Allows the use of the /focus command.
+    default: op

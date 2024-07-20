@@ -1,0 +1,6 @@
+plugin_disabled: "&cThe plugin {plugin} is disabled in the world {world}."
+plugin_enabled: "&aThe plugin {plugin} is enabled in the world {world}."
+plugin_not_found: "&cPlugin {plugin} not found."
+world_not_found: "&cThe world {world} does not exist."
+cannot_disable_main_plugin: "&cYou cannot disable the main plugin {plugin} in any world."
+no_permission: "&cYou do not have permission to use this command."
