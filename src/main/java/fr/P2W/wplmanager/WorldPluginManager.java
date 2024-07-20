@@ -1,12 +1,14 @@
 package fr.P2W.wplmanager;
 
+import fr.P2W.wplmanager.commands.DisplCommand;
+import fr.P2W.wplmanager.commands.EnplCommand;
+import fr.P2W.wplmanager.commands.FlagsCommand;
+import fr.P2W.wplmanager.commands.FocusCommand;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.command.TabExecutor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -18,20 +20,21 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class WorldPluginManager extends JavaPlugin implements TabExecutor, Listener {
+public class WorldPluginManager extends JavaPlugin implements Listener {
     private Map<String, Map<String, Boolean>> pluginWorldStatus = new HashMap<>();
+    private final String PLUGIN_NAME = "WorldPluginManager";
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        this.getCommand("displ").setExecutor(this);
-        this.getCommand("enpl").setExecutor(this);
-        this.getCommand("flags").setExecutor(this);
-        this.getCommand("focus").setExecutor(this);
-        this.getCommand("displ").setTabCompleter(this);
-        this.getCommand("enpl").setTabCompleter(this);
-        this.getCommand("flags").setTabCompleter(this);
-        this.getCommand("focus").setTabCompleter(this);
+        getCommand("displ").setExecutor(new DisplCommand(this));
+        getCommand("enpl").setExecutor(new EnplCommand(this));
+        getCommand("flags").setExecutor(new FlagsCommand(this));
+        getCommand("focus").setExecutor(new FocusCommand(this));
+        getCommand("displ").setTabCompleter(new DisplCommand(this));
+        getCommand("enpl").setTabCompleter(new EnplCommand(this));
+        getCommand("flags").setTabCompleter(new FlagsCommand(this));
+        getCommand("focus").setTabCompleter(new FocusCommand(this));
         loadConfig();
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("Plugin activé !");
@@ -61,12 +64,12 @@ public class WorldPluginManager extends JavaPlugin implements TabExecutor, Liste
         }
     }
 
-    private void saveConfigData() {
+    public void saveConfigData() {
         getConfig().set("pluginWorldStatus", pluginWorldStatus);
         saveConfig();
     }
 
-    private String getPluginId(String pluginName) {
+    public String getPluginId(String pluginName) {
         Plugin plugin = getServer().getPluginManager().getPlugin(pluginName);
         return plugin != null ? plugin.getDescription().getName() : null;
     }
@@ -89,52 +92,20 @@ public class WorldPluginManager extends JavaPlugin implements TabExecutor, Liste
         }
     }
 
-    private boolean isPluginEnabledInWorld(String pluginId, String worldName) {
+    public boolean isPluginEnabledInWorld(String pluginId, String worldName) {
         return !pluginWorldStatus.containsKey(worldName) || 
                pluginWorldStatus.get(worldName).getOrDefault(pluginId, true);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /" + label + " <plugin> <world>");
-            return false;
-        }
-
-        String pluginName = args[0];
-        String worldName = args[1];
-        World world = Bukkit.getWorld(worldName);
-
-        if (world == null) {
-            sender.sendMessage(ChatColor.RED + "Le monde spécifié n'existe pas.");
-            return false;
-        }
-
-        switch (label.toLowerCase()) {
-            case "displ":
-                setPluginStatus(pluginName, worldName, false, sender);
-                break;
-            case "enpl":
-                setPluginStatus(pluginName, worldName, true, sender);
-                break;
-            case "flags":
-                displayFlags(worldName, sender);
-                break;
-            case "focus":
-                setFocus(pluginName, worldName, sender);
-                break;
-            default:
-                return false;
-        }
-
-        saveConfigData();
-        return true;
-    }
-
-    private void setPluginStatus(String pluginName, String worldName, boolean status, CommandSender sender) {
+    public void setPluginStatus(String pluginName, String worldName, boolean status, CommandSender sender) {
         String pluginId = getPluginId(pluginName);
         if (pluginId == null) {
             sender.sendMessage(ChatColor.RED + "Plugin " + pluginName + " non trouvé.");
+            return;
+        }
+
+        if (pluginName.equalsIgnoreCase(PLUGIN_NAME) && !status) {
+            sender.sendMessage(ChatColor.RED + "Vous ne pouvez pas désactiver le plugin " + PLUGIN_NAME + " dans aucun monde.");
             return;
         }
 
@@ -143,7 +114,18 @@ public class WorldPluginManager extends JavaPlugin implements TabExecutor, Liste
         sender.sendMessage(ChatColor.GREEN + "Plugin " + pluginName + " (" + pluginId + ") " + (status ? "activé" : "désactivé") + " dans le monde " + worldName);
     }
 
-    private void displayFlags(String worldName, CommandSender sender) {
+    public void displayPluginFlag(String worldName, String pluginName, CommandSender sender) {
+        String pluginId = getPluginId(pluginName);
+        if (pluginId == null) {
+            sender.sendMessage(ChatColor.RED + "Plugin " + pluginName + " non trouvé.");
+            return;
+        }
+
+        boolean status = pluginWorldStatus.containsKey(worldName) && pluginWorldStatus.get(worldName).getOrDefault(pluginId, true);
+        sender.sendMessage(ChatColor.GOLD + "Plugin " + pluginName + " (" + pluginId + ") dans le monde " + worldName + ": " + (status ? "Activé" : "Désactivé"));
+    }
+
+    public void displayFlags(String worldName, CommandSender sender) {
         if (!pluginWorldStatus.containsKey(worldName)) {
             sender.sendMessage(ChatColor.YELLOW + "Aucun plugin configuré pour le monde " + worldName);
             return;
@@ -154,7 +136,7 @@ public class WorldPluginManager extends JavaPlugin implements TabExecutor, Liste
                 sender.sendMessage(ChatColor.AQUA + plugin + ": " + (status ? "Activé" : "Désactivé")));
     }
 
-    private void setFocus(String pluginName, String worldName, CommandSender sender) {
+    public void setFocus(String pluginName, String worldName, CommandSender sender) {
         String pluginId = getPluginId(pluginName);
         if (pluginId == null) {
             sender.sendMessage(ChatColor.RED + "Plugin " + pluginName + " non trouvé.");
@@ -164,19 +146,5 @@ public class WorldPluginManager extends JavaPlugin implements TabExecutor, Liste
         for (String world : Bukkit.getWorlds().stream().map(World::getName).collect(Collectors.toList())) {
             setPluginStatus(pluginName, world, world.equals(worldName), sender);
         }
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return Arrays.stream(Bukkit.getPluginManager().getPlugins())
-                         .map(Plugin::getName)
-                         .collect(Collectors.toList());
-        } else if (args.length == 2) {
-            return Bukkit.getWorlds().stream()
-                         .map(World::getName)
-                         .collect(Collectors.toList());
-        }
-        return Collections.emptyList();
     }
 }
