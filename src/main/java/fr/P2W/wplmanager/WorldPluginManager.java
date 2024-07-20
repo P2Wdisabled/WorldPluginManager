@@ -24,6 +24,21 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
     private Map<String, Map<String, Boolean>> pluginWorldStatus = new HashMap<>();
     private final String PLUGIN_NAME = "WorldPluginManager";
 
+    private static final List<String> WORLD_EDIT_COMMANDS = Arrays.asList(
+        "help", "tool", "sel", "desel", "pos1", "pos2", "hpos1", "hpos2", "chunk",
+        "expand", "contract", "outset", "inset", "size", "count", "distr", "set", 
+        "replace", "overlay", "naturalize", "walls", "outline", "forest", "cyl", 
+        "hcyl", "sphere", "hsphere", "pyramid", "hpyramid", "line", "curve", 
+        "generate", "drain", "fill", "fillr", "floodfill", "fixlava", "fixwater", 
+        "removeabove", "removebelow", "removenear", "remove", "stack", "move", 
+        "copy", "cut", "paste", "rotate", "flip", "schematic", "load", "save", 
+        "list", "remove", "clear", "cancel", "undo", "redo", "snapshot", "list", 
+        "restore", "info", "history", "sel", "wand", "drawsel", "replacenear", 
+        "smooth", "deform", "generate", "forestgen", "brush", "mat", "mask", 
+        "replacenear", "farwand", "tool", "snap", "thru", "unstuck", "toggleplace", 
+        "tree", "craftscripts", "cs"
+    );
+
     @Override
     public void onEnable() {
         saveDefaultConfig();
@@ -78,8 +93,15 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
     public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
         String worldName = player.getWorld().getName();
-        String[] commandParts = event.getMessage().substring(1).split(" ");
-        String commandLabel = commandParts[0];
+        String message = event.getMessage();
+
+        // Gestion des commandes WorldEdit
+        if (message.startsWith("//")) {
+            handleWorldEditCommand(event, player, worldName, message.substring(2));
+            return;
+        }
+
+        String commandLabel = message.substring(1).split(" ")[0];
 
         PluginCommand command = getServer().getPluginCommand(commandLabel);
         if (command != null) {
@@ -88,6 +110,21 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
             if (!isPluginEnabledInWorld(pluginId, worldName)) {
                 player.sendMessage(ChatColor.RED + "Le plugin " + plugin.getName() + " est désactivé dans ce monde.");
                 event.setCancelled(true);
+            }
+        }
+    }
+
+    private void handleWorldEditCommand(PlayerCommandPreprocessEvent event, Player player, String worldName, String command) {
+        String commandLabel = command.split(" ")[0];
+
+        if (WORLD_EDIT_COMMANDS.contains(commandLabel)) {
+            Plugin plugin = getServer().getPluginManager().getPlugin("WorldEdit");
+            if (plugin != null) {
+                String pluginId = plugin.getDescription().getName();
+                if (!isPluginEnabledInWorld(pluginId, worldName)) {
+                    player.sendMessage(ChatColor.RED + "Le plugin " + plugin.getName() + " est désactivé dans ce monde.");
+                    event.setCancelled(true);
+                }
             }
         }
     }
@@ -111,6 +148,7 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
 
         pluginWorldStatus.putIfAbsent(worldName, new HashMap<>());
         pluginWorldStatus.get(worldName).put(pluginId, status);
+        saveConfigData();
         sender.sendMessage(ChatColor.GREEN + "Plugin " + pluginName + " (" + pluginId + ") " + (status ? "activé" : "désactivé") + " dans le monde " + worldName);
     }
 
@@ -146,5 +184,6 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
         for (String world : Bukkit.getWorlds().stream().map(World::getName).collect(Collectors.toList())) {
             setPluginStatus(pluginName, world, world.equals(worldName), sender);
         }
+        saveConfigData();
     }
 }
