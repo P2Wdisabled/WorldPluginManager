@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Built-By: Louis
+Build-Jdk: 17.0.7
+Specification-Title: WorldPluginManager
+Specification-Version: 1.0
+Implementation-Title: WorldPluginManager
+Implementation-Version: 1.0-SNAPSHOT
+Implementation-Vendor-Id: fr.P2W.wplmanager
+Created-By: Maven Integration for Eclipse
+
