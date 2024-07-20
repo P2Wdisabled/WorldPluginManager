@@ -95,4 +95,4 @@ worldpluginmanager.focus: Allows the use of the /focus command.
 
 ### License
 
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License. See the LICENSE file for details.
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License. See the [LICENSE](https://github.com/P2Wdisabled/WorldPluginManager/blob/main/LICENSE) file for details.
