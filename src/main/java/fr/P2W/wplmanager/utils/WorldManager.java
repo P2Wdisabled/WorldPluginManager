@@ -1,6 +1,5 @@
 package fr.P2W.wplmanager.utils;
 
-import fr.P2W.wplmanager.WorldPluginManager;
 import static fr.P2W.wplmanager.utils.ConfigManager.pluginWorldStatus;
 
 public class WorldManager {

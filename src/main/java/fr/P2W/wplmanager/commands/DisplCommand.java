@@ -1,6 +1,7 @@
 package fr.P2W.wplmanager.commands;
 
 import fr.P2W.wplmanager.WorldPluginManager;
+import fr.P2W.wplmanager.utils.PluginManager;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -13,8 +14,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static fr.P2W.wplmanager.utils.ConfigManager.getMessage;
+
 public class DisplCommand implements TabExecutor, TabCompleter {
     private final WorldPluginManager plugin;
+    PluginManager pluginManager;
 
     public DisplCommand(WorldPluginManager plugin) {
         this.plugin = plugin;
@@ -23,7 +27,7 @@ public class DisplCommand implements TabExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("worldpluginmanager.displ")) {
-            sender.sendMessage(plugin.getMessage("no_permission", null));
+            sender.sendMessage(getMessage("no_permission", null));
             return true;
         }
 
@@ -41,7 +45,7 @@ public class DisplCommand implements TabExecutor, TabCompleter {
             return false;
         }
 
-        plugin.setPluginStatus(pluginName, worldName, false, sender);
+        pluginManager.setPluginStatus(pluginName, worldName, false, sender);
         return true;
     }
 
