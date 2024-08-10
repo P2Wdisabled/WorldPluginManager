@@ -18,7 +18,7 @@ public class ConfigManager {
 
 
     public ConfigManager(WorldPluginManager plugin) {
-        ConfigManager.plugin = plugin;
+        this.plugin = plugin;
     }
 
     public static void loadMessagesConfig() {

@@ -31,6 +31,11 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        ConfigManager configManager = new ConfigManager(this);
+        new WorldEditManager(this);
+        new FlagManager(this);
+        new PluginManager(this);
+
         saveDefaultConfig();
         ConfigManager.loadMessagesConfig();
         ConfigManager.loadConfig();
@@ -45,11 +50,6 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
         getCommand("focus").setTabCompleter(new FocusCommand(this));
 
         getServer().getPluginManager().registerEvents(new CommandEvent(this), this);
-
-        new ConfigManager(this);
-        new WorldEditManager(this);
-        new FlagManager(this);
-        new PluginManager(this);
 
         getLogger().info("Plugin enabled!");
     }
