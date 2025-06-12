@@ -4,21 +4,12 @@ import fr.P2W.wplmanager.commands.DisplCommand;
 import fr.P2W.wplmanager.commands.EnplCommand;
 import fr.P2W.wplmanager.commands.FlagsCommand;
 import fr.P2W.wplmanager.commands.FocusCommand;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketType;
-import com.comphenix.protocol.wrappers.MinecraftKey;
+import fr.P2W.wplmanager.config.ConfigManager;
+import fr.P2W.wplmanager.packet.PacketManager;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -26,36 +17,38 @@ import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Main plugin class for WorldPluginManager.
+ */
 public class WorldPluginManager extends JavaPlugin implements Listener {
-    private Map<String, Map<String, Boolean>> pluginWorldStatus = new HashMap<>();
+    private ConfigManager configManager;
+    private PacketManager packetManager;
     private final String PLUGIN_NAME = "WorldPluginManager";
-    private FileConfiguration messagesConfig;
-    private ProtocolManager protocolManager;
 
     private static final List<String> WORLD_EDIT_COMMANDS = Arrays.asList(
-        "help", "tool", "sel", "desel", "pos1", "pos2", "hpos1", "hpos2", "chunk",
-        "expand", "contract", "outset", "inset", "size", "count", "distr", "set", 
-        "replace", "overlay", "naturalize", "walls", "outline", "forest", "cyl", 
-        "hcyl", "sphere", "hsphere", "pyramid", "hpyramid", "line", "curve", 
-        "generate", "drain", "fill", "fillr", "floodfill", "fixlava", "fixwater", 
-        "removeabove", "removebelow", "removenear", "remove", "stack", "move", 
-        "copy", "cut", "paste", "rotate", "flip", "schematic", "load", "save", 
-        "list", "remove", "clear", "cancel", "undo", "redo", "snapshot", "list", 
-        "restore", "info", "history", "sel", "wand", "drawsel", "replacenear", 
-        "smooth", "deform", "generate", "forestgen", "brush", "mat", "mask", 
-        "replacenear", "farwand", "tool", "snap", "thru", "unstuck", "toggleplace", 
-        "tree", "craftscripts", "cs"
+            "help", "tool", "sel", "desel", "pos1", "pos2", "hpos1", "hpos2", "chunk",
+            "expand", "contract", "outset", "inset", "size", "count", "distr", "set",
+            "replace", "overlay", "naturalize", "walls", "outline", "forest", "cyl",
+            "hcyl", "sphere", "hsphere", "pyramid", "hpyramid", "line", "curve",
+            "generate", "drain", "fill", "fillr", "floodfill", "fixlava", "fixwater",
+            "removeabove", "removebelow", "removenear", "remove", "stack", "move",
+            "copy", "cut", "paste", "rotate", "flip", "schematic", "load", "save",
+            "list", "remove", "clear", "cancel", "undo", "redo", "snapshot", "list",
+            "restore", "info", "history", "sel", "wand", "drawsel", "replacenear",
+            "smooth", "deform", "generate", "forestgen", "brush", "mat", "mask",
+            "replacenear", "farwand", "tool", "snap", "thru", "unstuck", "toggleplace",
+            "tree", "craftscripts", "cs"
     );
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        loadMessagesConfig();
+        configManager = new ConfigManager(this);
+        configManager.loadMessagesConfig();
+
         getCommand("displ").setExecutor(new DisplCommand(this));
         getCommand("enpl").setExecutor(new EnplCommand(this));
         getCommand("flags").setExecutor(new FlagsCommand(this));
@@ -64,62 +57,50 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
         getCommand("enpl").setTabCompleter(new EnplCommand(this));
         getCommand("flags").setTabCompleter(new FlagsCommand(this));
         getCommand("focus").setTabCompleter(new FocusCommand(this));
-        loadConfig();
+
+        configManager.loadConfig();
         getServer().getPluginManager().registerEvents(this, this);
-        registerPacketListeners();
+        packetManager = new PacketManager(this);
+        packetManager.registerPacketListeners();
         getLogger().info("Plugin enabled!");
     }
 
     @Override
     public void onDisable() {
-        saveConfig();
+        configManager.saveConfigData();
         getLogger().info("Plugin disabled!");
     }
 
-    private void loadMessagesConfig() {
-        File messagesFile = new File(getDataFolder(), "messages.yml");
-        if (!messagesFile.exists()) {
-            saveResource("messages.yml", false);
-        }
-        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+    public String getPluginName() {
+        return PLUGIN_NAME;
     }
 
     public String getMessage(String key, Map<String, String> placeholders) {
-        String message = messagesConfig.getString(key, key);
-        if (placeholders != null) {
-            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                message = message.replace("{" + entry.getKey() + "}", entry.getValue());
-            }
-        }
-        return ChatColor.translateAlternateColorCodes('&', message);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void loadConfig() {
-        ConfigurationSection section = getConfig().getConfigurationSection("pluginWorldStatus");
-        if (section != null) {
-            Set<String> worlds = section.getKeys(false);
-            for (String world : worlds) {
-                ConfigurationSection worldSection = section.getConfigurationSection(world);
-                if (worldSection != null) {
-                    Map<String, Boolean> plugins = new HashMap<>();
-                    for (String plugin : worldSection.getKeys(false)) {
-                        plugins.put(plugin, worldSection.getBoolean(plugin));
-                    }
-                    pluginWorldStatus.put(world, plugins);
-                }
-            }
-        }
-    }
-
-    public void saveConfigData() {
-        getConfig().set("pluginWorldStatus", pluginWorldStatus);
-        saveConfig();
+        return configManager.getMessage(key, placeholders);
     }
 
     public String getPluginId(String pluginName) {
-        Plugin plugin = getServer().getPluginManager().getPlugin(pluginName);
-        return plugin != null ? plugin.getDescription().getName() : null;
+        return configManager.getPluginId(pluginName);
+    }
+
+    public boolean isPluginEnabledInWorld(String pluginId, String worldName) {
+        return configManager.isPluginEnabledInWorld(pluginId, worldName);
+    }
+
+    public void setPluginStatus(String pluginName, String worldName, boolean status, CommandSender sender) {
+        configManager.setPluginStatus(pluginName, worldName, status, sender);
+    }
+
+    public void displayPluginFlag(String worldName, String pluginName, CommandSender sender) {
+        configManager.displayPluginFlag(worldName, pluginName, sender);
+    }
+
+    public void displayFlags(String worldName, CommandSender sender) {
+        configManager.displayFlags(worldName, sender);
+    }
+
+    public void setFocus(String pluginName, String worldName, CommandSender sender) {
+        configManager.setFocus(pluginName, worldName, sender);
     }
 
     @EventHandler
@@ -165,121 +146,5 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
                 }
             }
         }
-    }
-
-    public boolean isPluginEnabledInWorld(String pluginId, String worldName) {
-        return !pluginWorldStatus.containsKey(worldName) || 
-               pluginWorldStatus.get(worldName).getOrDefault(pluginId, true);
-    }
-
-    public void setPluginStatus(String pluginName, String worldName, boolean status, CommandSender sender) {
-        String pluginId = getPluginId(pluginName);
-        if (pluginId == null) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("plugin", pluginName);
-            sender.sendMessage(getMessage("plugin_not_found", placeholders));
-            return;
-        }
-
-        if (pluginName.equalsIgnoreCase(PLUGIN_NAME) && !status) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("plugin", PLUGIN_NAME);
-            sender.sendMessage(getMessage("cannot_disable_main_plugin", placeholders));
-            return;
-        }
-
-        pluginWorldStatus.putIfAbsent(worldName, new HashMap<>());
-        pluginWorldStatus.get(worldName).put(pluginId, status);
-        saveConfigData();
-        Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("plugin", pluginName);
-        placeholders.put("world", worldName);
-        sender.sendMessage(getMessage(status ? "plugin_enabled" : "plugin_disabled", placeholders));
-    }
-
-    public void displayPluginFlag(String worldName, String pluginName, CommandSender sender) {
-        String pluginId = getPluginId(pluginName);
-        if (pluginId == null) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("plugin", pluginName);
-            sender.sendMessage(getMessage("plugin_not_found", placeholders));
-            return;
-        }
-
-        boolean status = pluginWorldStatus.containsKey(worldName) && pluginWorldStatus.get(worldName).getOrDefault(pluginId, true);
-        Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("plugin", pluginName);
-        placeholders.put("world", worldName);
-        sender.sendMessage(getMessage(status ? "plugin_enabled" : "plugin_disabled", placeholders));
-    }
-
-    public void displayFlags(String worldName, CommandSender sender) {
-        if (!pluginWorldStatus.containsKey(worldName)) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("world", worldName);
-            sender.sendMessage(getMessage("world_not_found", placeholders));
-            return;
-        }
-
-        sender.sendMessage(ChatColor.GOLD + "Plugins for world " + worldName + ":");
-        pluginWorldStatus.get(worldName).forEach((plugin, status) -> {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("plugin", plugin);
-            placeholders.put("world", worldName);
-            sender.sendMessage(getMessage(status ? "plugin_enabled" : "plugin_disabled", placeholders));
-        });
-    }
-
-    public void setFocus(String pluginName, String worldName, CommandSender sender) {
-        String pluginId = getPluginId(pluginName);
-        if (pluginId == null) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("plugin", pluginName);
-            sender.sendMessage(getMessage("plugin_not_found", placeholders));
-            return;
-        }
-
-        for (String world : Bukkit.getWorlds().stream().map(World::getName).collect(Collectors.toList())) {
-            setPluginStatus(pluginName, world, world.equals(worldName), sender);
-        }
-        saveConfigData();
-    }
-
-    private void registerPacketListeners() {
-        if (Bukkit.getPluginManager().getPlugin("ProtocolLib") == null) {
-            getLogger().warning("ProtocolLib not found. Packet listeners disabled.");
-            return;
-        }
-
-        protocolManager = ProtocolLibrary.getProtocolManager();
-        protocolManager.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL,
-                PacketType.Play.Client.CUSTOM_PAYLOAD, PacketType.Play.Server.CUSTOM_PAYLOAD) {
-
-            @Override
-            public void onPacketReceiving(PacketEvent event) {
-                if (shouldCancelPacket(event.getPlayer(), event.getPacket().getMinecraftKeys().read(0))) {
-                    event.setCancelled(true);
-                }
-            }
-
-            @Override
-            public void onPacketSending(PacketEvent event) {
-                if (shouldCancelPacket(event.getPlayer(), event.getPacket().getMinecraftKeys().read(0))) {
-                    event.setCancelled(true);
-                }
-            }
-        });
-    }
-
-    private boolean shouldCancelPacket(Player player, MinecraftKey channel) {
-        String key = channel.getFullKey();
-        String pluginNamePart = key.contains(":" ) ? key.substring(0, key.indexOf(":")) : key;
-        Plugin target = Bukkit.getPluginManager().getPlugin(pluginNamePart);
-        if (target == null) {
-            return false;
-        }
-        String pluginId = target.getDescription().getName();
-        String worldName = player.getWorld().getName();
-        return !isPluginEnabledInWorld(pluginId, worldName);
     }
 }
