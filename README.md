@@ -9,6 +9,7 @@ WorldPluginManager is a Minecraft plugin that allows server administrators to ma
 - View the status of plugins in different worlds.
 - Customizable messages through `messages.yml` with support for placeholders.
 - Permission-based command execution.
+- Blocks plugin channel packets using ProtocolLib when a plugin is disabled in a world.
 
 ## Compilation
 

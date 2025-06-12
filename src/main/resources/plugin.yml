@@ -1,6 +1,7 @@
 name: WorldPluginManager
 main: fr.P2W.wplmanager.WorldPluginManager
 version: 2.0
+softdepend: [ProtocolLib]
 commands:
   displ:
     description: Disables a plugin in a specified world.
