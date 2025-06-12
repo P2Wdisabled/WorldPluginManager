@@ -77,8 +77,10 @@ public class WorldPluginManager extends JavaPlugin implements Listener {
 
     public String getMessage(String key, Map<String, String> placeholders) {
         String message = messagesConfig.getString(key, key);
-        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            message = message.replace("{" + entry.getKey() + "}", entry.getValue());
+        if (placeholders != null) {
+            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                message = message.replace("{" + entry.getKey() + "}", entry.getValue());
+            }
         }
         return ChatColor.translateAlternateColorCodes('&', message);
     }
