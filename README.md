@@ -10,15 +10,31 @@ WorldPluginManager is a Minecraft plugin that allows server administrators to ma
 - Customizable messages through `messages.yml` with support for placeholders.
 - Permission-based command execution.
 
+## Compilation
+
+WorldPluginManager is built with **Maven** and requires **JDK 8** or later.
+
+```bash
+git clone https://github.com/P2Wdisabled/WorldPluginManager.git
+cd WorldPluginManager
+mvn package
+```
+
+After the build, the plugin JAR is located in `target/WorldPluginManager-1.0-SNAPSHOT.jar`.
+
 ## Installation
 
-1. **Download the Plugin**: Download the latest version of the plugin from the [releases](https://www.spigotmc.org/resources/world-plugin-manager.118225/) page.
+1. **Download or Compile**: Use the JAR from the [releases](https://www.spigotmc.org/resources/world-plugin-manager.118225/) page or compile it yourself as described above.
 
-2. **Add to Server**: Place the downloaded `.jar` file into the `plugins` folder of your Minecraft server.
+2. **Add to Server**: Copy the `.jar` file into the `plugins` folder of your Minecraft server.
 
-3. **Start Server**: Start your Minecraft server. The plugin will generate the necessary configuration files.
+3. **Start Server**: Launch your server to generate the default configuration files.
 
 ## Configuration
+
+### `config.yml`
+
+Stores the activation status of plugins for each world. This file is created automatically and normally does not need manual editing.
 
 ### `messages.yml`
 
@@ -34,7 +50,7 @@ no_permission: "&cYou do not have permission to use this command."
 ```
 ### `plugin.yml`
 
-Define the commands and their permissions.
+Reference file listing all commands and their permissions. You normally do not need to modify it.
 
 ```yaml
 name: WorldPluginManager
@@ -72,25 +88,23 @@ permissions:
     default: op
 ```
 
+## Usage
+
 ### Commands
 
-/displ <plugin> <world>: Disable a plugin in a specified world.
-
-/enpl <plugin> <world>: Enable a plugin in a specified world.
-
-/flags <world> [plugin]: Display the status of plugins in a specified world or a specific plugin's status in a world.
-
-/focus <plugin> <world>: Enable a plugin only in a specified world.
+```
+/displ <plugin> <world>   - Disable a plugin in a world
+/enpl <plugin> <world>    - Enable a plugin in a world
+/flags <world> [plugin]   - Show plugin status
+/focus <plugin> <world>   - Enable a plugin only in one world
+```
 
 ### Permissions
 
-worldpluginmanager.displ: Allows the use of the /displ command.
-
-worldpluginmanager.enpl: Allows the use of the /enpl command.
-
-worldpluginmanager.flags: Allows the use of the /flags command.
-
-worldpluginmanager.focus: Allows the use of the /focus command.
+- `worldpluginmanager.displ` – use the `/displ` command
+- `worldpluginmanager.enpl` – use the `/enpl` command
+- `worldpluginmanager.flags` – use the `/flags` command
+- `worldpluginmanager.focus` – use the `/focus` command
 
 
 ### License
